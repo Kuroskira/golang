@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"gobook/chapter2/conv"
+	"gobook/golang/chapter2/conv"
 	"os"
 	"strconv"
 )
