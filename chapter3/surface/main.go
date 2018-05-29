@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"math"
+	"os"
 )
 
 const (
@@ -16,29 +18,53 @@ const (
 
 var sin30, cos30 = math.Sin(angle), math.Cos(angle) // sin(30°), cos(30°)
 
+type zFunc func(x, y float64) float64
+
 func main() {
+	var f zFunc
+
+	err := "Use eggbox or saddle as argument."
+
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if os.Args[1] == "eggbox" {
+		f = eggBox
+	} else if os.Args[1] == "saddle" {
+		f = saddle
+	} else {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	svg(os.Stdout, f)
+}
+
+func svg(w io.Writer, f zFunc) {
 	fmt.Printf("<svg xmlns='http://www.w3.org/2000/svg' "+
 		"style='stroke: grey; fill: white; stroke-width: 0.7' "+
 		"width='%d' height='%d'>", width, height)
 
 	for i := 0; i < cells; i++ {
 		for j := 0; j < cells; j++ {
-			ax, ay := corner(i+1, j)
-			bx, by := corner(i, j)
-			cx, cy := corner(i, j+1)
-			dx, dy := corner(i+1, j+1)
+			ax, ay := corner(i+1, j, f)
+			bx, by := corner(i, j, f)
+			cx, cy := corner(i, j+1, f)
+			dx, dy := corner(i+1, j+1, f)
 			if math.IsNaN(ax) || math.IsNaN(ax) || math.IsNaN(ax) || math.IsNaN(ax) ||
 				math.IsNaN(ax) || math.IsNaN(ax) || math.IsNaN(ax) || math.IsNaN(ax) {
 				continue
 			}
-			fmt.Printf("<polygon style='stroke: %s; fill: #222222' points='%g,%g,%g,%g %g,%g,%g,%g'/>\n",
+			fmt.Fprintf(w, "<polygon style='stroke: %s; fill: #222222' points='%g,%g,%g,%g %g,%g,%g,%g'/>\n",
 				"#666666", ax, ay, bx, by, cx, cy, dx, dy)
 		}
 	}
-	fmt.Println("</svg>")
+	fmt.Fprintln(w, "</svg>")
 }
 
-func corner(i, j int) (float64, float64) {
+func corner(i, j int, f zFunc) (float64, float64) {
 	// Find point (x, y) at corner of cell (i,j)
 	x := xyrange * (float64(i)/cells - 0.5)
 	y := xyrange * (float64(j)/cells - 0.5)
@@ -52,7 +78,15 @@ func corner(i, j int) (float64, float64) {
 	return sx, sy
 }
 
-func f(x, y float64) float64 {
-	r := math.Hypot(x, y) // distance from (0,0)
-	return math.Sin(r) / r
+func eggBox(x, y float64) float64 {
+	//r := math.Hypot(x, y) // distance from (0,0)
+	return 0.2 * (math.Cos(x) + math.Cos(y))
+}
+
+func saddle(x, y float64) float64 {
+	a := 25.0
+	b := 17.0
+	a2 := a * a
+	b2 := b * b
+	return (y*y/a2 - x*x/b2)
 }
